@@ -21,6 +21,8 @@ namespace Berta
 
         public List<int> InterseccionesLista = new List<int>(); //Lista de 0,1 (y -1 cuando es la misma cobertura) para definir la intersección entre esta cobertura y las otras de un conjunto
 
+        public int orden; //Orden dentro de un conjunto de cobertura mínima.
+
         //Constructores
         /// <summary>
         /// Constructor simple
@@ -37,7 +39,7 @@ namespace Berta
         /// <param name="Poligono"></param>
         public Cobertura(string Nombre, string Fl, string Tipo, Geometry Poligono)
         {
-            nombre = Nombre; ;
+            this.nombre = Nombre;
             FL = Fl;
             tipo = Tipo;
 
@@ -54,7 +56,7 @@ namespace Berta
         /// <param name="Poligono"></param>
         public Cobertura(string Nombre, string Fl, string Tipo, List<Geometry> Poligono)
         {
-            nombre = Nombre; ;
+            nombre = Nombre;
             FL = Fl;
             tipo = Tipo;
 
@@ -82,7 +84,7 @@ namespace Berta
         /// <param name="Poligono"></param>
         public Cobertura(string Nombre, string Fl, string Tipo, int Tipo_Multiple, Geometry Poligono)
         {
-            nombre = Nombre; ;
+            nombre = Nombre;
             FL = Fl;
             tipo = Tipo;
             tipo_multiple = Tipo_Multiple;
@@ -144,7 +146,6 @@ namespace Berta
                 else
                     r = nombre;
             }
-
 
             return r;
         } //Forma el nombre en el fromato deseado por Enaire
@@ -216,7 +217,7 @@ namespace Berta
         /// Traduce de coordenadas NetTopologySuite a coordenadas SharpKML y guarda la infromación asociada en un Documento SharkKML (NO KML)
         /// </summary>
         /// <returns></returns>
-        public SharpKml.Dom.Document CrearDocumentoSharpKML()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+        public SharpKml.Dom.Document CrearDocumentoSharpKML()
         {
             List<SharpKml.Dom.Placemark> lista = new List<SharpKml.Dom.Placemark>();
 
@@ -370,8 +371,8 @@ namespace Berta
             Doc.Visibility = false; //Inicialmente invisible 
 
             return Doc;
-        } //Traduce de NetTopologySuite a SharpKML y guarda la infromación asociada en un Documento SharkKML (NO KML) para despues ser
-                                                                 //guardado en un documento que agrupara todas las carpetas
+        } 
+
         /// <summary>
         /// Crear KML simple (solo la cobertura en cuestión y lo guarda en la carpeta indicada
         /// </summary>
