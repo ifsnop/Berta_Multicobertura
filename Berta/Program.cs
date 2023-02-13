@@ -26,6 +26,16 @@ namespace Berta
             string onlyArgs = DirectoryplusArgs.Replace("\"" + Environment.GetCommandLineArgs()[0] + "\"", "");
             string[] args = onlyArgs.Split(",");
 
+	    Console.WriteLine("DirectoryplusArgs: >" + DirectoryplusArgs + "<");
+	    Console.WriteLine("onlyArgs:>" + onlyArgs + "<");
+	    foreach(string arg in args) {
+		Console.WriteLine("args:>" + arg + "<");
+	    }
+	    foreach(string s in Environment.GetCommandLineArgs()) {
+		Console.WriteLine("getcommandlineargs:>" + s + "<");
+	    }
+
+
             //Settings del NetTopologySuite para evitar errores de NaN en ciertos cálculos 
             //https://stackoverflow.com/questions/68035230/nettopology-found-non-noded-intersection-exception-when-determining-the-differ
             var curInstance = NetTopologySuite.NtsGeometryServices.Instance;
@@ -37,9 +47,15 @@ namespace Berta
                 curInstance.CoordinateEqualityComparer);
 
             //Eliminar todos los posibles archivos existentes en carpeta temporales (esto puede ocurrir si se ha cerrado el programa antes de tiempo o a sucedido una excepción no deseada)
-            DirectoryInfo TemporalC = new DirectoryInfo(@"Temporal");
-            foreach (System.IO.FileInfo file in TemporalC.GetFiles()) file.Delete();
-            foreach (System.IO.DirectoryInfo subDirectory in TemporalC.GetDirectories()) subDirectory.Delete(true);
+	    string temporalPath = @".temporal";
+            DirectoryInfo TemporalC = new DirectoryInfo(@".temporal");
+	    if ( TemporalC.Exists ) {
+        	foreach (System.IO.FileInfo file in TemporalC.GetFiles()) file.Delete();
+        	foreach (System.IO.DirectoryInfo subDirectory in TemporalC.GetDirectories()) subDirectory.Delete(true);
+	    } else {
+		DirectoryInfo newTemporalC = Directory.CreateDirectory(temporalPath);
+		Console.WriteLine("The temporary directory was created successfully at {0}.", Directory.GetCreationTime(temporalPath));
+	    }
 
             //Metodo comando vs Metodo menú 0 Menú 1 Comandos
             StreamReader CvsM_R = new StreamReader("Ajustes.txt");
@@ -98,7 +114,7 @@ namespace Berta
                         Console.WriteLine();
                         Console.WriteLine("Introduzca cadena de comandos");
 
-                        if (args2.Count() == 0) //No pasamos comando desde consola superior
+                        if (args2==null || args2.Count() == 0) //No pasamos comando desde consola superior
                         {
                             string lin = Console.ReadLine();
                             if (lin != "0") //No cerramos aplicación
