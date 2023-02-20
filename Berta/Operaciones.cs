@@ -30,7 +30,7 @@ namespace Berta
         /// <returns></returns>
         public static int CrearKML_KMZ(SharpKml.Dom.Document Doc, string NombreDoc, string carpeta, string Destino)
         {
-            string path = Path.Combine(Path.Combine(@".\" + carpeta + "", NombreDoc + ".kml"));
+            string path = Path.Combine(Path.Combine(@"." + Path.DirectorySeparatorChar + carpeta + "", NombreDoc + ".kml"));
             string path_destino = Path.Combine(Path.Combine(Destino, NombreDoc + ".kmz"));
 
             try
@@ -424,25 +424,27 @@ namespace Berta
         public static (FileStream,string) AbrirKMLdeKMZ (string path)
         {
             //Eliminar todo dentro de carpeta temporal
-            DirectoryInfo TemporalC = new DirectoryInfo(@"Temporal");
+            DirectoryInfo TemporalC = new DirectoryInfo(@".temporal");
             foreach (System.IO.FileInfo file in TemporalC.GetFiles()) file.Delete();
             foreach (System.IO.DirectoryInfo subDirectory in TemporalC.GetDirectories()) subDirectory.Delete(true);
 
             string[] MirarSiKMZ = path.Split(".");
             string Nombre = Path.GetFileNameWithoutExtension(path);
+            string extension = Path.GetExtension(path);
             FileStream H = null;
-            if (MirarSiKMZ[1] == "kmz") //Abrir en formato kmz
+            //if (MirarSiKMZ[1] == "kmz") //Abrir en formato kmz
+            if ( extension == ".kmz") //Abrir en formato kmz
             {
-                System.IO.Compression.ZipFile.ExtractToDirectory(path, @".\Temporal"); //extraer KML SACTA
-                if (File.Exists(Path.Combine(@".\Temporal", Nombre + ".kml")))
+                System.IO.Compression.ZipFile.ExtractToDirectory(path, @".temporal"); //extraer KML SACTA
+                if (File.Exists(Path.Combine(@".temporal", Nombre + ".kml")))
                 {
-                    H = File.Open(Path.Combine(@".\Temporal", Nombre + ".kml"), FileMode.Open); //Abrir KML  
+                    H = File.Open(Path.Combine(@".temporal", Nombre + ".kml"), FileMode.Open); //Abrir KML  
                 }
                 else
                 {
                     try
                     {
-                        H = File.Open(Path.Combine(@".\Temporal", "doc.kml"), FileMode.Open); //Abrir KML generico 
+                        H = File.Open(Path.Combine(@"." + Path.DirectorySeparatorChar + @".temporal", "doc.kml"), FileMode.Open); //Abrir KML generico 
                     }
                     catch //Posiblemente se ha cambiado el nombre del archivo a mano
                     {
@@ -486,10 +488,10 @@ namespace Berta
             H.Close();
 
             //Eliminar archivo temporal
-            if (File.Exists(Path.Combine(@".\Temporal", "" + FileName + ".kml")))
+            if (File.Exists(Path.Combine(@"." + Path.DirectorySeparatorChar + @".temporal", "" + FileName + ".kml")))
             {
                 // If file found, delete it    
-                File.Delete(Path.Combine(@".\Temporal", "" + FileName + ".kml"));
+                File.Delete(Path.Combine(@"." + Path.DirectorySeparatorChar + @".temporal", "" + FileName + ".kml"));
             }
 
             var polyGON = F.Root.Flatten().OfType<SharpKml.Dom.Polygon>().ToList(); //Extraer lista de poligonos del KML
@@ -902,7 +904,7 @@ namespace Berta
         {
             Console.WriteLine();
             string Directorio_IN = null;
-            DirectoryInfo DI = new DirectoryInfo(@".\Temporal");
+            DirectoryInfo DI = new DirectoryInfo(@"." + Path.DirectorySeparatorChar + @".temporal");
             bool Correcto = false;
             while (!Correcto)
             {
@@ -988,16 +990,16 @@ namespace Berta
         public static (DirectoryInfo, string) Comando_DirectorioIN(string[] args)
         {
             string Directorio_IN = "";
-            if (Convert.ToInt32(args[0]) == 1)
-                Directorio_IN = args[2];
+            if (Convert.ToInt32(args[(int) IndexOpciones.opcion_menu]) == 1)
+                Directorio_IN = args[(int) IndexOpciones.directorio_entrada];
             else
-                Directorio_IN = args[1];
-            DirectoryInfo DI = new DirectoryInfo(@".\Temporal");
+                Directorio_IN = args[(int) IndexOpciones.nivel_vuelo];
+            // DirectoryInfo DI = new DirectoryInfo(@".temporal");
             try
             {
-                DI = new DirectoryInfo(Directorio_IN);
+                DirectoryInfo DI = new DirectoryInfo(Directorio_IN);
                 int control = 0;
-                if (Convert.ToInt32(args[0]) != 3)
+                if (Convert.ToInt32(args[(int) IndexOpciones.opcion_menu]) != 3)
                     control = DI.GetFiles().Count();
                 else
                     control = DI.GetDirectories().Length;
@@ -1007,11 +1009,11 @@ namespace Berta
                 else
                 {
                     Console.WriteLine();
-                    Console.WriteLine("Error con el directorio de entrada, no puede contener puntos (.)");
+                    // Console.WriteLine("Error con el directorio de entrada, no puede contener puntos (.)");
                     Console.WriteLine("DEBUG: Carpeta vacía");
                     Operaciones.EscribirOutput(args, "Directorio de entrada no válido (Carpeta vacía)");
-                    System.Threading.Thread.Sleep(2000);
-                    Console.Clear();
+                    // System.Threading.Thread.Sleep(2000);
+                    // Console.Clear();
 
                     return (null, null);
                 }
@@ -1022,8 +1024,8 @@ namespace Berta
                 Console.WriteLine("Error con el directorio de entrada, no puede contener puntos (.)");
                 Console.WriteLine("DEBUG: " + e.Message);
                 Operaciones.EscribirOutput(args, "Directorio de entrada no válido (" + e.Message + ")");
-                System.Threading.Thread.Sleep(2000);
-                Console.Clear();
+                // System.Threading.Thread.Sleep(2000);
+                // Console.Clear();
 
                 return (null, null);
             }
@@ -1068,7 +1070,7 @@ namespace Berta
         {
             try
             {
-                double NM_Umbral = Convert.ToDouble(args[3].Replace('.', ','));
+                double NM_Umbral = Convert.ToDouble(args[(int) IndexOpciones.area_minima].Replace('.', ','));
                 double Umbral_Areas = NM_Umbral * Trans;
                 return Umbral_Areas;
             }
@@ -1077,7 +1079,7 @@ namespace Berta
                 Console.WriteLine("DEBUG: " + e.Message);
                 Operaciones.EscribirOutput(args, "Error con umbral de discriminación (" + e.Message + ")");
                 System.Threading.Thread.Sleep(2000);
-                Console.Clear();
+                // Console.Clear();
                 return -1;
             }
         }
@@ -1097,7 +1099,7 @@ namespace Berta
         {
             Console.WriteLine();
             string Directorio_OUT = null;
-            DirectoryInfo DO = new DirectoryInfo(@".\Temporal");
+            DirectoryInfo DO = new DirectoryInfo(@"." + Path.DirectorySeparatorChar + @".temporal");
             bool Correcto = false;
             while (!Correcto)
             {
@@ -1115,7 +1117,7 @@ namespace Berta
                     Console.WriteLine("Error con el directorio de salida, no puede contener puntos (.)");
                     Console.WriteLine("DEBUG: " + e.Message);
                     Console.ReadLine();
-                    Console.Clear();
+                    // Console.Clear();
                     Console.WriteLine("Berta T");
                     Console.WriteLine();
                     Console.WriteLine("1 - Cálculo de multi-coberturas");
@@ -1147,7 +1149,7 @@ namespace Berta
         {
             Console.WriteLine();
             string Directorio_OUT = null;
-            DirectoryInfo DO = new DirectoryInfo(@".\Temporal");
+            DirectoryInfo DO = new DirectoryInfo(@"." + Path.DirectorySeparatorChar + @".temporal");
             bool Correcto = false;
             while (!Correcto)
             {
@@ -1179,7 +1181,7 @@ namespace Berta
         /// <returns></returns>
         public static string Comando_DirectorioOUT(string Directorio_OUT)
         {
-            DirectoryInfo DO = new DirectoryInfo(@".\Temporal");
+            DirectoryInfo DO = new DirectoryInfo(@"." + Path.DirectorySeparatorChar + @".temporal");
             try
             {
                 DO = new DirectoryInfo(Directorio_OUT);
@@ -1191,8 +1193,8 @@ namespace Berta
                 Console.WriteLine();
                 Console.WriteLine("Error con el directorio de salida, no puede contener puntos (.)");
                 Console.WriteLine("DEBUG: " + e.Message);
-                System.Threading.Thread.Sleep(2000);
-                Console.Clear();
+                // System.Threading.Thread.Sleep(2000);
+                // Console.Clear();
                 return null;
             }
         }
@@ -1206,7 +1208,7 @@ namespace Berta
         {
             Console.WriteLine();
             string Directorio_IN = null;
-            DirectoryInfo DI = new DirectoryInfo(@".\Temporal");
+            DirectoryInfo DI = new DirectoryInfo(@"." + Path.DirectorySeparatorChar + @".temporal");
             bool Correcto = false;
             while (!Correcto)
             {
@@ -1234,7 +1236,7 @@ namespace Berta
                     Console.WriteLine("DEBUG: " + e.Message);
                     Console.WriteLine("Enter para continuar");
                     Console.ReadLine();
-                    Console.Clear();
+                    // Console.Clear();
                     Console.WriteLine("Berta T");
                     Console.WriteLine();
                     Console.WriteLine("2 - Filtrado SACTA");
@@ -1318,7 +1320,7 @@ namespace Berta
             //Confirmar directorio
             Console.WriteLine();
             string Directorio_OUT = null;
-            DirectoryInfo DO = new DirectoryInfo(@".\Temporal");
+            DirectoryInfo DO = new DirectoryInfo(@"." + Path.DirectorySeparatorChar + @".temporal");
             bool Correcto = false;
             bool errorFatal = false;
             while (!Correcto)
@@ -1354,9 +1356,9 @@ namespace Berta
                         errorFatal = true;
                     }
                     
-                    Console.Clear();
-                    Console.WriteLine("Berta T");
-                    Console.Clear();
+                    // Console.Clear();
+                    // Console.WriteLine("Berta T");
+                    // Console.Clear();
                     Console.WriteLine("Berta T");
                     Console.WriteLine();
                     Console.WriteLine("2 - Filtrado SACTA");
@@ -1415,6 +1417,11 @@ namespace Berta
         {
             try
             {
+                if (!File.Exists("Output_COMMAND.txt"))
+                {
+                    Console.WriteLine("Fichero Output_COMMAND.txt no encontrado");
+                }
+
                 StreamReader R = new StreamReader("Output_COMMAND.txt");
                 string Lin = R.ReadLine();
                 List<string> Doc = new List<string>();

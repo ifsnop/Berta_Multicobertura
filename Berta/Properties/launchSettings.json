@@ -1,7 +1,8 @@
 {
   "profiles": {
     "Berta": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "1,FL025,.\\COBERTURAS\\FL025\\,0.1,GC-FL025,.\\SALIDAS\\"
     }
   }
 }

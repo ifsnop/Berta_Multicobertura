@@ -5,8 +5,10 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
-using ICSharpCode.SharpZipLib.Zip;
+using System.Xml.Schema;
+// using ICSharpCode.SharpZipLib.Zip;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.Union;
 using NetTopologySuite.Precision;
@@ -15,60 +17,85 @@ using SharpKml.Engine;
 
 namespace Berta
 {
-    
+    enum IndexOpciones
+    {
+        opcion_menu = 0,
+        nivel_vuelo = 1,
+        directorio_entrada = 2,
+        area_minima = 3,
+        prefijo_salida = 4,
+        directorio_salida = 5
+    }
     class Program
     {
         static void Main(string[] args2)
         {
             Boolean A = false;
+            // DirectoryplusArgs: >C:\coding\Berta_Multicobertura\Berta\bin\Debug\net6.0\BertaTools.dll 1,FL025,.\COBERTURAS\FL025\,0.1,GC-FL025,.\SALIDAS\<
+            // string DirectoryplusArgs = Environment.CommandLine;
+            // onlyArgs:>C:\coding\Berta_Multicobertura\Berta\bin\Debug\net6.0\BertaTools.dll 1,FL025,.\COBERTURAS\FL025\,0.1,GC-FL025,.\SALIDAS\<
+            // string onlyArgs = DirectoryplusArgs.Replace("\"" + Environment.GetCommandLineArgs()[0] + "\"", "");
+            // string onlyArgs = Environment.GetCommandLineArgs()[1];
+            // args:> C:\coding\Berta_Multicobertura\Berta\bin\Debug\net6.0\BertaTools.dll 1 <
+            // args:> FL025 <
+            // args:>.\COBERTURAS\FL025\<
+            // args:> 0.1 <
+            // args:> GC - FL025 <
+            // args:>.\SALIDAS\<
+            // string[] args = onlyArgs.Split(",");
+            /*
+            Console.WriteLine("DirectoryplusArgs: >" + DirectoryplusArgs + "<");
+            Console.WriteLine("onlyArgs:>" + onlyArgs + "<");
+            foreach (string arg in args)
+            {
+                Console.WriteLine("args:>" + arg + "<");
+            }
+            foreach (string s in Environment.GetCommandLineArgs())
+            {
+                Console.WriteLine("getcommandlineargs:>" + s + "<");
+            }
+            */
 
-            string DirectoryplusArgs = Environment.CommandLine;
-            string onlyArgs = DirectoryplusArgs.Replace("\"" + Environment.GetCommandLineArgs()[0] + "\"", "");
-            string[] args = onlyArgs.Split(",");
-
-	    Console.WriteLine("DirectoryplusArgs: >" + DirectoryplusArgs + "<");
-	    Console.WriteLine("onlyArgs:>" + onlyArgs + "<");
-	    foreach(string arg in args) {
-		Console.WriteLine("args:>" + arg + "<");
-	    }
-	    foreach(string s in Environment.GetCommandLineArgs()) {
-		Console.WriteLine("getcommandlineargs:>" + s + "<");
-	    }
-
-
-            //Settings del NetTopologySuite para evitar errores de NaN en ciertos cálculos 
-            //https://stackoverflow.com/questions/68035230/nettopology-found-non-noded-intersection-exception-when-determining-the-differ
-            var curInstance = NetTopologySuite.NtsGeometryServices.Instance;
-            NetTopologySuite.NtsGeometryServices.Instance = new NetTopologySuite.NtsGeometryServices(
-                curInstance.DefaultCoordinateSequenceFactory,
-                curInstance.DefaultPrecisionModel,
-                curInstance.DefaultSRID,
-                GeometryOverlay.NG, // RH: use 'Next Gen' overlay generator
-                curInstance.CoordinateEqualityComparer);
+            string[] args = null;
+            for (int i = 0; i < args2.Length; i++)
+            {
+                Console.WriteLine("args2[" + i + "]>" + args2[i] + "<");
+            }
+            if (args2.Length == 1)
+            {
+                args = args2[0].Split(",");
+                foreach (string arg in args)
+                {
+                    Console.WriteLine("args:>" + arg + "<");
+                }
+            }
 
             //Eliminar todos los posibles archivos existentes en carpeta temporales (esto puede ocurrir si se ha cerrado el programa antes de tiempo o a sucedido una excepción no deseada)
-	    string temporalPath = @".temporal";
+            string temporalPath = @".temporal";
             DirectoryInfo TemporalC = new DirectoryInfo(@".temporal");
-	    if ( TemporalC.Exists ) {
-        	foreach (System.IO.FileInfo file in TemporalC.GetFiles()) file.Delete();
-        	foreach (System.IO.DirectoryInfo subDirectory in TemporalC.GetDirectories()) subDirectory.Delete(true);
-	    } else {
-		DirectoryInfo newTemporalC = Directory.CreateDirectory(temporalPath);
-		Console.WriteLine("The temporary directory was created successfully at {0}.", Directory.GetCreationTime(temporalPath));
-	    }
+            if (TemporalC.Exists)
+            {
+                foreach (System.IO.FileInfo file in TemporalC.GetFiles()) file.Delete();
+                foreach (System.IO.DirectoryInfo subDirectory in TemporalC.GetDirectories()) subDirectory.Delete(true);
+            }
+            else
+            {
+                DirectoryInfo newTemporalC = Directory.CreateDirectory(temporalPath);
+                Console.WriteLine("The temporary directory was created successfully at {0}.", Directory.GetCreationTime(temporalPath));
+            }
 
             //Metodo comando vs Metodo menú 0 Menú 1 Comandos
             StreamReader CvsM_R = new StreamReader("Ajustes.txt");
             int CvsM = Convert.ToInt32(CvsM_R.ReadLine());
-            Console.WriteLine(CvsM);
+            Console.WriteLine("metodo menu/comandos:>" + CvsM + "<");
 
             //Obtener tolerancias y declarar umbrales
             double epsilon = Convert.ToDouble(CvsM_R.ReadLine());
             double Trans = 0.0003636658613823218; //1 NM^2 Valor empirico
             double Umbral_Areas = 1 * Trans;
-            Console.WriteLine(epsilon);
+            Console.WriteLine("epsilon:>" + epsilon + "<");
             double epsilon_simple = Convert.ToDouble(CvsM_R.ReadLine());
-            Console.WriteLine(epsilon_simple);
+            Console.WriteLine("epsilon_simple:>" + epsilon_simple + "<");
 
             CvsM_R.Close();
 
@@ -76,11 +103,11 @@ namespace Berta
 
             int Control_M = -1;
             //List<string> comando = new List<string>();
-            while ((Control_M != 0)&&(!A)) //Menú principal
+            while ((Control_M != 0) && (!A)) //Menú principal
             {
                 try
                 {
-                    Console.Clear();
+                    // Console.Clear();
                     Console.WriteLine("Berta T");
                     Console.WriteLine();
                     Console.WriteLine("1 - Cálculo de multi-coberturas");
@@ -99,7 +126,7 @@ namespace Berta
                         Control_M = Convert.ToInt32(Console.ReadLine()); //Actualizar valor Control_M
                     else//Modo comando
                     {
-                        Console.Clear();
+                        // Console.Clear();
                         Console.WriteLine("Berta T - COMMAND");
                         Console.WriteLine();
                         Console.WriteLine("1 - Cálculo de multi-coberturas (1,FL,DirectorioIn,Umbral(NM),NombreSalida,DirectorioOut)");
@@ -114,7 +141,7 @@ namespace Berta
                         Console.WriteLine();
                         Console.WriteLine("Introduzca cadena de comandos");
 
-                        if (args2==null || args2.Count() == 0) //No pasamos comando desde consola superior
+                        if (null == args2 || 0 == args2.Length) //No pasamos comando desde consola superior
                         {
                             string lin = Console.ReadLine();
                             if (lin != "0") //No cerramos aplicación
@@ -129,10 +156,24 @@ namespace Berta
                         else
                         {
                             A = true;
-                            Control_M = Convert.ToInt32(args[0]);
+                            Control_M = Convert.ToInt32(args[(int)IndexOpciones.opcion_menu]);
                         }
-                            
+
                     }
+
+
+                    //Settings del NetTopologySuite para evitar errores de NaN en ciertos cálculos 
+                    //https://stackoverflow.com/questions/68035230/nettopology-found-non-noded-intersection-exception-when-determining-the-differ
+                    var curInstance = NetTopologySuite.NtsGeometryServices.Instance;
+                    NetTopologySuite.NtsGeometryServices.Instance = new NetTopologySuite.NtsGeometryServices(
+                        curInstance.DefaultCoordinateSequenceFactory,
+                        curInstance.DefaultPrecisionModel,
+                        curInstance.DefaultSRID,
+                        GeometryOverlay.NG, // RH: use 'Next Gen' overlay generator
+                        curInstance.CoordinateEqualityComparer);
+
+
+
 
                     ////////////////// PROGRAMA ///////////////////////
                     //Ifs de control
@@ -162,7 +203,7 @@ namespace Berta
                             FL_IN = Operaciones.Menu_FL();
 
                             //1.2 - Entrada
-                            (DI, Directorio_IN) = Operaciones.Menu_DirectorioIN(FL_IN,1);
+                            (DI, Directorio_IN) = Operaciones.Menu_DirectorioIN(FL_IN, 1);
 
                             //1.2.2 Entrada umbral de filtro (1NM de forma predeterminada)
                             Umbral_Areas = Operaciones.Menu_Umbral(Trans);
@@ -170,7 +211,7 @@ namespace Berta
                         }//Modo menú
                         else//Modo comando
                         {
-                            if(args.Length==6)
+                            if (args.Length == 6)
                             {
                                 //1.1 - FL
                                 FL_IN = Operaciones.Comando_FL(args);
@@ -183,7 +224,7 @@ namespace Berta
 
                                 if ((FL_IN == null) || (DI == null) || (Umbral_Areas == -1))
                                     CommandControl = false;
-                                    
+
                             }
                             else //Comando mal
                             {
@@ -196,17 +237,17 @@ namespace Berta
                         }//Modo comando
 
                         //1.3 - Cargar archivos
-                            
+
                         Console.WriteLine("Archivos cargados:");
-                        if(CommandControl==true) //si estamos en modo control y alguno de los elementos experimenta algun error no se sigue con el cálculo
+                        if (CommandControl == true) //si estamos en modo control y alguno de los elementos experimenta algun error no se sigue con el cálculo
                         {
-                            if (DI.GetFiles().Count() > 1) //Si hay mas de 1 archivo dentro de la carpeta se ejecuta el programa
+                            if (DI.GetFiles().Length > 1) //Si hay mas de 1 archivo dentro de la carpeta se ejecuta el programa
                             {
                                 //Cargar coberturas originales 
                                 List<Cobertura> Originales = new List<Cobertura>();
                                 (Originales, NombresCargados) = Operaciones.CargarCoberturas(DI, FL_IN, args, CvsM);
 
-                                if(Originales!=null) //Controlar excepción asociada al cargado de cobertura
+                                if (Originales != null) //Controlar excepción asociada al cargado de cobertura
                                 {
                                     //1.4 - Cálculos
                                     //Originales (crear carpeta)
@@ -222,10 +263,10 @@ namespace Berta
                                     stopwatch.Stop();
 
                                     Console.WriteLine();
-                                    Console.WriteLine("Tiempo de ejecución primera parte: " + new TimeSpan(stopwatch.ElapsedTicks).TotalSeconds + " segundos");
+                                    Console.WriteLine("Tiempo de ejecución primera parte (filtrar combinaciones): " + new TimeSpan(stopwatch.ElapsedTicks).TotalSeconds + " segundos");
 
                                     //Mostrar en consola un tiempo estimado de cálculo
-                                    double NumMuestras = conjunto.Combinaciones.Count();
+                                    double NumMuestras = conjunto.Combinaciones.Count;
                                     double MuestraSegundo = 163.371; //Valor empirico
                                     double tiempo = (NumMuestras / MuestraSegundo) / 60;
                                     double segundos = Math.Round(((Math.Round(tiempo, 2) - Math.Round(tiempo, 0)) * 60) + 25, 0);
@@ -337,20 +378,20 @@ namespace Berta
                                     parte1 = true;
                                     //Fin de la parte1
                                 }
-                                else if(CvsM == 0)
+                                else if (CvsM == 0)
                                 {
                                     Console.WriteLine("No se ha completado el cálculo");
                                     Console.ReadLine();
                                 }
 
-                                
+
                             }
                             else
                             {
                                 Console.WriteLine();
                                 Console.WriteLine("Esta carpeta no contiene suficientes archivos para realizar los cálculos");
                                 Operaciones.EscribirOutput(args, "Error en directorio de entrada, no hay suficientes elementos");
-                                if(CvsM==0)
+                                if (CvsM == 0)
                                     Console.ReadLine();
                             }
                         }
@@ -360,24 +401,24 @@ namespace Berta
                             //Parte2 - Guardar fichero en carpeta salida, obtener nombre de proyecto
 
                             //Informar al usuario
-                            Console.Clear();
+                            // Console.Clear();
                             Console.WriteLine("Berta T");
                             Console.WriteLine();
                             Console.WriteLine("1 - Cálculo de multi-coberturas");
                             Console.WriteLine();
                             Console.WriteLine("Directorio de entrada: " + Directorio_IN);
                             Console.WriteLine();
-                            Console.WriteLine("Umbral de discriminación: "+ Math.Round(Umbral_Areas/Trans,3)+" NM^2");
+                            Console.WriteLine("Umbral de discriminación: " + Math.Round(Umbral_Areas / Trans, 3) + " NM^2");
                             Console.WriteLine();
                             Console.WriteLine("Archivos cargados:");
                             Console.WriteLine();
                             foreach (string N in NombresCargados)
                                 Console.WriteLine(N);
                             Console.WriteLine();
-                            double Segs = Math.Round((Math.Round(TiempoEjecución_Parte2.TotalSeconds / 60, 2) - Math.Round(TiempoEjecución_Parte2.TotalSeconds / 60, 0))*60,0);
+                            double Segs = Math.Round((Math.Round(TiempoEjecución_Parte2.TotalSeconds / 60, 2) - Math.Round(TiempoEjecución_Parte2.TotalSeconds / 60, 0)) * 60, 0);
                             if (Segs < 0)
                                 Segs = 0;
-                            Console.WriteLine("Tiempo de ejecución: " + Math.Round(TiempoEjecución_Parte2.TotalSeconds/60,0) +" minutos " + Segs + " segundos");
+                            Console.WriteLine("Tiempo de ejecución: " + Math.Round(TiempoEjecución_Parte2.TotalSeconds / 60, 0) + " minutos " + Segs + " segundos");
                             Console.WriteLine();
 
                             //2.1 - Nombre de proyecto
@@ -400,14 +441,16 @@ namespace Berta
                                 else
                                     NombreProyecto = args[4];
                             }
-                            
+
 
                             //2.2 - Crear documento para exportar
                             var Doc = new SharpKml.Dom.Document(); //se crea documento
                             Doc.Name = NombreProyecto;
 
                             //Ordenar carpetas tal y como enaire lo quiere
-                            Folders= Folders.OrderBy(x=>x.Name).ToList();
+                            // Folders = Folders.OrderBy(x=>x.Name).ToList();
+                            Folders.Sort((p, q) => p.Name.CompareTo(q.Name));
+
 
                             Doc.AddFeature(KML_Cobertura_total); //Añadimos cobertura total
                             foreach (SharpKml.Dom.Folder fold in Folders)
@@ -420,7 +463,7 @@ namespace Berta
                             while (Control_CM_Parte2 != 0)
                             {
                                 //Informar al usuario
-                                Console.Clear();
+                                //Console.Clear();
                                 Console.WriteLine("Berta T");
                                 Console.WriteLine();
                                 Console.WriteLine("1 - Cálculo de multi-coberturas");
@@ -445,12 +488,12 @@ namespace Berta
                                 if (CvsM == 0)
                                     Directorio_OUT = Operaciones.Menu_DirectorioOUT(Directorio_IN, Umbral_Areas, Trans, NombresCargados, Segs, TiempoEjecución_Parte2, NombreProyecto);
                                 else
-                                    Directorio_OUT = Operaciones.Comando_DirectorioOUT(args[5]);
+                                    Directorio_OUT = Operaciones.Comando_DirectorioOUT(args[(int)IndexOpciones.directorio_salida]);
 
                                 //2.4 - Exportar proyecto
-                                if(Directorio_OUT!=null) //Control (sobretodo en versión comando)
+                                if (Directorio_OUT != null) //Control (sobretodo en versión comando)
                                 {
-                                    int Control = Operaciones.CrearKML_KMZ(Doc, NombreProyecto, "Temporal", Directorio_OUT); //Se crea un kml temporal para después crear KMZ
+                                    int Control = Operaciones.CrearKML_KMZ(Doc, NombreProyecto, ".temporal", Directorio_OUT); //Se crea un kml temporal para después crear KMZ
                                     if (Control == 0)
                                     {
                                         Console.WriteLine("Exportado con exito!");
@@ -474,7 +517,7 @@ namespace Berta
                                 }
                                 else //Si se produce un error en el comando con el directorio de salida, se guardará el resultado en la carpeta temporal
                                 {
-                                    int Control = Operaciones.CrearKML_KMZ(Doc, NombreProyecto, "Temporal", @"Temporal"); //Se crea un kml temporal para después crear KMZ
+                                    int Control = Operaciones.CrearKML_KMZ(Doc, NombreProyecto, @".temporal", @"." + Path.DirectorySeparatorChar + @".temporal"); //Se crea un kml temporal para después crear KMZ
                                     if (Control == 0)
                                     {
                                         Console.WriteLine("Exportado con exito en la carpeta Temporal (Berta Tools VX.X/Temporal)!");
@@ -506,7 +549,7 @@ namespace Berta
                                             System.Threading.Thread.Sleep(2000);
                                             Operaciones.EscribirOutput(args, "Error en directorio de salida (BAD)");
                                         }
-                                            
+
                                     }
                                 }
                             }
@@ -525,7 +568,7 @@ namespace Berta
                         DirectoryInfo Directorio_Cobertura;
                         string path_Cob;
 
-                        if((args.Count() ==4)||(CvsM==0))
+                        if ((args.Count() == 4) || (CvsM == 0))
                         {
                             //1 obtener directorio de entrada
                             if (CvsM == 0)
@@ -542,9 +585,9 @@ namespace Berta
                                 List<string> NombresCargados = new List<string>();
 
                                 //Cargar todos los archivos de la carpeta
-                                (Coberturas, NombresCargados) = Operaciones.CargarCoberturas(Directorio_Cobertura, null, args,CvsM);
+                                (Coberturas, NombresCargados) = Operaciones.CargarCoberturas(Directorio_Cobertura, null, args, CvsM);
 
-                                if(Coberturas != null) //Controlar excepción error de traducción
+                                if (Coberturas != null) //Controlar excepción error de traducción
                                 {
                                     //Actualizar nombres en coberturas (FL)
                                     int i = 0;
@@ -572,7 +615,7 @@ namespace Berta
                                         i++;
                                     }
 
-                                    if (Directorio_Cobertura.GetFiles().Count() >= 1) //Minimo un archivo
+                                    if (Directorio_Cobertura.GetFiles().Length >= 1) //Minimo un archivo
                                     {
                                         bool Control_DC = false; //Bucle para cargar
                                         while (Control_DC == false)
@@ -678,22 +721,22 @@ namespace Berta
                                     }
 
                                 }
-                                else if(CvsM ==0)
+                                else if (CvsM == 0)
                                 {
                                     Console.WriteLine("No se ha completado el cálculo");
                                     Console.ReadLine();
                                 }
                             }
                         }
-                        else 
+                        else
                         {
                             Console.WriteLine();
                             Console.WriteLine("El comando no cumple las caracterisitcas necesarias para ejecutar esta orden");
                             Operaciones.EscribirOutput(args, "Comando no válido, insuficientes argumentos");
                             System.Threading.Thread.Sleep(2000);
                         }
-                        
-                        
+
+
 
                     } //Filtrado SACTA
                     else if (Control_M == 3) //Cobertura mínima
@@ -706,7 +749,7 @@ namespace Berta
 
                         SharpKml.Dom.Folder KML_Anillos = new SharpKml.Dom.Folder(); //Donde se guardarán la distirbución por anillos de FL
                         SharpKml.Dom.Folder KML_Radares = new SharpKml.Dom.Folder(); //Donde se guardarán la distirbución por radares
- 
+
                         DirectoryInfo DI = null;
                         string directorio = null;
                         if (CvsM == 0) //modo menú
@@ -719,7 +762,7 @@ namespace Berta
                             //Ahora ya tenemos directorio DI con carpetas, abrimos cada una de las carpetas y guardamos las coberturas
                             List<Cobertura> ListadoCobrturasPorCarpeta = new List<Cobertura>(); //Lista donde guardar TODAS las coberturas.
                             List<string> Nombres_Radar = new List<string>(); //Para crear las carpetas en mostrado por radar
-                            if(DI.GetDirectories().Count()!=0)
+                            if (DI.GetDirectories().Length != 0)
                             {
                                 foreach (DirectoryInfo carpeta in DI.GetDirectories())
                                 {
@@ -745,7 +788,7 @@ namespace Berta
 
                             //Una vez cargadas todas las coberturas, agrupamos por FL. 
                             ListadoCobrturasPorCarpeta.OrderBy(x => x.FL);
-                            int FL = Convert.ToInt32(Regex.Match(ListadoCobrturasPorCarpeta[0].FL, "(\\d+)").Value); int skips = 0;
+                            int FL = Convert.ToInt32(Regex.Match(ListadoCobrturasPorCarpeta[0].FL, "(\\d+)").Value); // int skips = 0;
                             int FL_ini = FL;
                             int interval = Convert.ToInt32(Regex.Match(ListadoCobrturasPorCarpeta[2].FL, "(\\d+)").Value) - Convert.ToInt32(Regex.Match(ListadoCobrturasPorCarpeta[1].FL, "(\\d+)").Value);
                             Geometry Trama = null; //Coberturas que serán restadas al nivel superior
@@ -766,13 +809,13 @@ namespace Berta
                                 List<Cobertura> Seleccionadas = ListadoCobrturasPorCarpeta.Where(x => x.FL == FLXXX).ToList();
                                 ListadoCobrturasPorCarpeta.RemoveAll(x => x.FL == FLXXX); //Eliminamos elementos con FLXXX
 
-                                if(Seleccionadas.Count!=0) //Solo si existen coberturas se ejecuta el proceso.
+                                if (Seleccionadas.Count != 0) //Solo si existen coberturas se ejecuta el proceso.
                                 {
                                     Conjunto Conjunto_Seleccionado = new Conjunto(Seleccionadas, "", FLXXX);
 
                                     Conjunto_Seleccionado.FiltrarCombinaciones();
                                     (List<Conjunto> ConjuntosPorLvl_F, Conjunto Anillos, Cobertura CoberturaMaxima) = Conjunto_Seleccionado.FormarCoberturasMultiples(epsilon, Umbral_Areas); //Calculamos multicobertura
-                                    (Conjunto Resultado_Seleccionados, Cobertura NoUsado1, Cobertura NoUsado2)=Conjunto_Seleccionado.FormarCoberturasSimples(Anillos, CoberturaMaxima, epsilon_simple, Umbral_Areas);
+                                    (Conjunto Resultado_Seleccionados, Cobertura NoUsado1, Cobertura NoUsado2) = Conjunto_Seleccionado.FormarCoberturasSimples(Anillos, CoberturaMaxima, epsilon_simple, Umbral_Areas);
 
                                     //Conjunto NuevaFinal = new Conjunto();
 
@@ -840,7 +883,7 @@ namespace Berta
                                 }
 
                                 Console.WriteLine(FL);
-                                FL=FL+interval;
+                                FL = FL + interval;
                             }
 
                             KML_Radares = Operaciones.CarpetaRedundados_CM(Nombres_Radar, AnillosFL, FL_ini, FL_MAX, interval); //CARPETAS DE ESCENARIO POR RADAR!
@@ -849,7 +892,7 @@ namespace Berta
 
                             string Directorio_salida = ""; //Directorio de salida
                             string Nombre_Proyecto = "Cobertura mínima";
-                            if(CvsM == 0) //Modo menú
+                            if (CvsM == 0) //Modo menú
                             {
                                 Console.WriteLine("Introduzca nombre del proyecto (si no introduce ninguno se creara uno por defecto):");
                                 Nombre_Proyecto = Console.ReadLine();
@@ -1043,14 +1086,14 @@ namespace Berta
                                         string FL_Interval = Operaciones.Menu_FL();
                                         Match m = Regex.Match(FL_Interval, "(\\d+)");
                                         intervalo = Convert.ToInt32(m.Value);
-                                        while(directorio_out==null)
+                                        while (directorio_out == null)
                                         {
                                             Console.WriteLine("Introducir directorio para guardar escenario");
                                             directorio_out = Operaciones.Comando_DirectorioOUT(Console.ReadLine());
                                         }
-                                        
+
                                     }
-                                        
+
                                     else //modo comando
                                     {
                                         (DI, directorio) = Operaciones.Comando_DirectorioIN(args);
@@ -1059,16 +1102,16 @@ namespace Berta
                                         intervalo = Convert.ToInt32(string.Empty);
                                         directorio_out = Operaciones.Comando_DirectorioOUT(Console.ReadLine());
                                     }
-                                        
+
                                     if (DI != null)
                                     {
                                         //Ahora ya tenemos directorio DI con carpetas, abrimos cada una de las carpetas y guardamos las coberturas
-                                        if (DI.GetDirectories().Count() != 0)
+                                        if (DI.GetDirectories().Length != 0)
                                         {
                                             foreach (DirectoryInfo carpeta in DI.GetDirectories())
                                             {
                                                 int FL = Convert.ToInt32(Regex.Match(FL_init, "(\\d+)").Value);
-                                                while(FL <= Convert.ToInt32(Regex.Match(FL_fin, "(\\d+)").Value))
+                                                while (FL <= Convert.ToInt32(Regex.Match(FL_fin, "(\\d+)").Value))
                                                 {
                                                     string FLXXX = "";
                                                     if (FL < 10)
@@ -1087,7 +1130,7 @@ namespace Berta
                                                     {
                                                         //---
                                                     }
-                                                    
+
 
                                                     FL = FL + intervalo;
                                                 }
@@ -1107,7 +1150,7 @@ namespace Berta
                                                 else
                                                     FLXXX = "FL" + FL;
 
-                                                try 
+                                                try
                                                 {
                                                     List<FileInfo> Listado_Coberturas_Escenario = DI.GetFiles().Where(x => (x.Name.Split("_").Last().Split(".").First() == FLXXX) || (x.Name.Split("-").Last().Split(".").First() == FLXXX)).ToList();
                                                     Listado_Coberturas_Escenario.ForEach(x => x.CopyTo(Path.Combine(directorio_out, x.Name))); //Soy buenisimo omg. Ejecuta la misma orden para todos. 
@@ -1144,7 +1187,7 @@ namespace Berta
                         Console.ReadLine();
                         Control_M = -1; //Sigue el buclce
                     }
-                    else if(A)
+                    else if (A)
                     {
                         Control_M = 0;
                     }
